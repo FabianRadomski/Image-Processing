@@ -21,35 +21,45 @@ def plate_detection(image):
     plate_imgs = image
     return plate_imgs
 
-cap = cv2.VideoCapture("Video7_2.avi")
+import matplotlib.pyplot as plt
+f, axarr = plt.subplots(3)
+
+
+cap = cv2.VideoCapture("TrainingSet/Categorie I/Video30_2.avi")
 ret, frame = cap.read()
 
-import matplotlib.pyplot as plt
+hsl = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-#blur = cv2.GaussianBlur(frame, (7,7), 0)
-filter = cv2.bilateralFilter(frame, 17, 50, 150)
-gray = cv2.cvtColor(filter, cv2.COLOR_BGR2GRAY)
+for i in range(frame.shape[0]):
+    for j in range(frame.shape[1]):
+        if hsl[i][j][0] < 15 or hsl[i][j][0] > 25 or hsl[i][j][2] < 127:
+            frame[i][j] = [255, 255, 255]
 
 
-edged = cv2.Canny(gray, 10, 170)
+filter = cv2.GaussianBlur(frame, (5, 5), 0)
+#filter = cv2.bilateralFilter(frame, 23, 10, 150)
+#gray = cv2.cvtColor(filter, cv2.COLOR_BGR2GRAY)
+#filter = cv2.medianBlur(filter, 3)
+print(hsl[290, 250])
+kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+filter = cv2.filter2D(filter, -1, kernel)
+axarr[0].imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
+edged = cv2.Canny(filter, 250, 300)
+axarr[0].imshow(cv2.cvtColor(filter, cv2.COLOR_BGR2RGB))
+axarr[1].imshow(edged)
 
 contours, ne  = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
+contours = sorted(contours, key=cv2.contourArea, reverse=True)[0:50]
 
 cntrs = []
 m = 0
 for c in contours:
     peri = cv2.arcLength(c, True)
     approx = cv2.approxPolyDP(c, 0.1 * peri, True)
-    m = max(len(approx), m)
     if len(approx) == 4:
         cntrs.append(c)
-        break
+        #break
 
-print(m)
-
-mask = np.zeros(gray.shape, np.uint8)
-# img_cntrd = cv2.drawContours(mask, [cntrs], 0, 255, -1)
-# img_cntrd = cv2.bitwise_and(frame, frame, mask=mask)
-plt.imshow(cv2.drawContours(frame, contours, -1, (255, 0, 0), 3))
+axarr[2].imshow(cv2.drawContours(frame, cntrs, -1, (255, 0, 0), 3))
 plt.show()
