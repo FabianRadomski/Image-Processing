@@ -22,44 +22,43 @@ def plate_detection(image):
     return plate_imgs
 
 import matplotlib.pyplot as plt
-f, axarr = plt.subplots(3)
+
+def filter_yellow(img):
+  img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+  for i in range(img.shape[0]):
+      for j in range(img.shape[1]):
+          if img[i][j][0] < 10 or img[i][j][0] > 22 or img[i][j][2] < 100 or img[i][j][1]<50:
+              img[i][j] = [0, 0, 0]
+  img = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+  return img
+
+def bgrToRgb(img):
+  return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
-cap = cv2.VideoCapture("TrainingSet/Categorie I/Video30_2.avi")
-ret, frame = cap.read()
+img_nums = [2, 3, 4, 5, 7, 8, 10, 12, 13, 14, 17, 20]
 
-hsl = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+#takes brg
 
-for i in range(frame.shape[0]):
-    for j in range(frame.shape[1]):
-        if hsl[i][j][0] < 15 or hsl[i][j][0] > 25 or hsl[i][j][2] < 127:
-            frame[i][j] = [255, 255, 255]
+f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
+ind = 0
+for i in img_nums:
+    cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
+    ret, frame = cap.read()
 
+    yellow = filter_yellow(frame)
 
-filter = cv2.GaussianBlur(frame, (5, 5), 0)
-#filter = cv2.bilateralFilter(frame, 23, 10, 150)
-#gray = cv2.cvtColor(filter, cv2.COLOR_BGR2GRAY)
-#filter = cv2.medianBlur(filter, 3)
-print(hsl[290, 250])
-kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-filter = cv2.filter2D(filter, -1, kernel)
-axarr[0].imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    axarr[ind].imshow(yellow)
 
-edged = cv2.Canny(filter, 250, 300)
-axarr[0].imshow(cv2.cvtColor(filter, cv2.COLOR_BGR2RGB))
-axarr[1].imshow(edged)
+    filter = cv2.GaussianBlur(frame, (5, 5), 0)
+    #filter = cv2.bilateralFilter(frame, 23, 10, 150)
+    #gray = cv2.cvtColor(filter, cv2.COLOR_BGR2GRAY)
+    #filter = cv2.medianBlur(filter, 3)
 
-contours, ne  = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-contours = sorted(contours, key=cv2.contourArea, reverse=True)[0:50]
+    kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+    filter = cv2.filter2D(filter, -1, kernel)
 
-cntrs = []
-m = 0
-for c in contours:
-    peri = cv2.arcLength(c, True)
-    approx = cv2.approxPolyDP(c, 0.1 * peri, True)
-    if len(approx) == 4:
-        cntrs.append(c)
-        #break
+    edged = cv2.Canny(filter, 250, 300)
+    ind += 1
 
-axarr[2].imshow(cv2.drawContours(frame, cntrs, -1, (255, 0, 0), 3))
 plt.show()
