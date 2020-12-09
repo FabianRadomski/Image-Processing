@@ -20,14 +20,8 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [2, 3, 4, 5, 7, 8, 10, 12, 13, 14, 17, 20]
+img_nums = [2, 3, 4, 5] # 7, 8, 10, 12, 13, 14, 17, 20
 f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
-
-
-def plate_detection(image):
-    # Replace the below lines with your code.
-    plate_imgs = image
-    return plate_imgs
 
 
 def filter_yellow(img):
@@ -157,9 +151,18 @@ def bbFromMap(visited):
 
     bb = BoundingBox(lt, lb, rt, rb)
     return bb
+# [tl, tr, br, bl]
+def rotate_both_planes(img, box):
+    width =  max(box.rt[0] - box.lt[0], box.rb[0] - box.lb[0])
+    height = max(box.rb[1] - box.rb[1], box.lb[1] - box.lt[1])
+    corners = np.float32([box.lt, box.rt, box.rb, box.lb])
+    mappedCorners = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
 
+    M = cv2.getPerspectiveTransform(corners, mappedCorners)
 
-def findBestCandidate(frame):
+    return cv2.warpPerspective(img, M, (width, height))
+
+def plate_detection(frame):
     yellow = filter_yellow(frame)
 
     kernel1 = np.ones((21, 21), np.uint8)
@@ -196,16 +199,25 @@ def findBestCandidate(frame):
         cv2.line(gray, tuple(box.lb), tuple(box.lt), 30, 1)
 
     boxes = sorted(boxes, key=lambda box: calculateArea(box), reverse=True)
+    best_box = boxes[0]
     for box in boxes[:3]:
         ar = calculateAspectRatio(box)
         if ar>4.3 and ar<7:
-            return box
+            best_box = box
+            break
+    return rotate_both_planes(frame, best_box)
 
+ind = 0
+for i in img_nums:
+    cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
+    ret, frame = cap.read()
+    axarr[ind].imshow(plate_detection(frame))
+    ind += 1
+plt.show()
 
 # ind = 0
 # for i in img_nums:
-#     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
-#     ret, frame = cap.read()
+#     
 #     yellow = filter_yellow(frame)
 #
 #     kernel1 = np.ones((21, 21), np.uint8)
