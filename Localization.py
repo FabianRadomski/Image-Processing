@@ -34,7 +34,7 @@ def filter_yellow(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     for i in range(img.shape[0]):
         for j in range(img.shape[1]):
-            if img[i][j][0] < 10 or img[i][j][0] > 35 or img[i][j][2] < 100 or img[i][j][1] < 40:
+            if img[i][j][0] < 15 or img[i][j][0] > 35 or img[i][j][2] < 100 or img[i][j][1] < 50:
                 img[i][j] = [0, 0, 0]
     img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
     return img
@@ -147,9 +147,10 @@ for i in img_nums:
     ret, frame = cap.read()
     yellow = filter_yellow(frame)
 
-    kernel1 = np.ones((20, 20), np.uint8)
-    kernel2 = np.ones((2, 2), np.uint8)
-    yellow = cv2.erode(yellow, kernel2, iterations=2)
+    kernel1 = np.ones((21, 21), np.uint8)
+    kernel2 = np.ones((3, 3), np.uint8)
+    yellow = cv2.erode(yellow, kernel2, iterations=1)
+    yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel2)
     yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel1)
     gray = cv2.cvtColor(yellow, cv2.COLOR_BGR2GRAY)
 
@@ -172,12 +173,13 @@ for i in img_nums:
             d = dfs_start(gray, [x, y])
             m = np.logical_or(m, d)
             boxes.append(bbFromMap(d))
-            
+
     for box in boxes:
         cv2.line(gray, tuple(box.lt), tuple(box.rt), 30, 1)
         cv2.line(gray, tuple(box.rt), tuple(box.rb), 30, 1)
         cv2.line(gray, tuple(box.rb), tuple(box.lb), 30, 1)
         cv2.line(gray, tuple(box.lb), tuple(box.lt), 30, 1)
+        ## area =
 
 
     axarr[ind].imshow(gray)
