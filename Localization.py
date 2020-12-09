@@ -27,7 +27,7 @@ def filter_yellow(img):
   img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
   for i in range(img.shape[0]):
       for j in range(img.shape[1]):
-          if img[i][j][0] < 10 or img[i][j][0] > 22 or img[i][j][2] < 100 or img[i][j][1]<50:
+          if img[i][j][0] < 10 or img[i][j][0] > 35 or img[i][j][2] < 100 or img[i][j][1]<40:
               img[i][j] = [0, 0, 0]
   img = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
   return img
@@ -36,7 +36,7 @@ def bgrToRgb(img):
   return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
-img_nums = [2, 3, 4, 5, 7, 8, 10, 12, 13, 14, 17, 20]
+img_nums = [2, 3]#, 4, 5, 7, 8, 10, 12, 13, 14, 17, 20]
 
 #takes brg
 
@@ -48,6 +48,10 @@ for i in img_nums:
 
     yellow = filter_yellow(frame)
 
+    kernel1 = np.ones((20, 20), np.uint8)
+    kernel2 = np.ones((2, 2), np.uint8)
+    yellow = cv2.erode(yellow, kernel2, iterations=2)
+    yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel1)
     axarr[ind].imshow(yellow)
 
     filter = cv2.GaussianBlur(frame, (5, 5), 0)
