@@ -20,7 +20,7 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [7, 8]  # 3, 4, 5, 7, 8, 10, 12, 13, 14, 17, 20]
+img_nums = [2, 3, 4, 5, 7, 8, 10, 12, 13, 14, 17, 20]
 f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 
@@ -72,6 +72,13 @@ def calculateArea(box):
                    box.rb[0] * box.lb[1] - box.rb[1] * box.lb[0]) / 2)
     return area
 
+def calculateAspectRatio(box):
+    edge1 = np.sqrt((int(box.lb[0])-int(box.lt[0]))**2+(int(box.lb[1])-int(box.lt[1]))**2)
+    edge2 = np.sqrt((int(box.rb[0])-int(box.lb[0]))**2+(int(box.rb[1])-int(box.lb[1]))**2)
+    if edge1==0:
+        return -1
+    aspect_ratio = edge2/edge1
+    return aspect_ratio
 
 class BoundingBox:
     def __init__(self, lt, lb, rt, rb):
@@ -152,10 +159,7 @@ def bbFromMap(visited):
     return bb
 
 
-ind = 0
-for i in img_nums:
-    cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
-    ret, frame = cap.read()
+def findBestCandidate(frame):
     yellow = filter_yellow(frame)
 
     kernel1 = np.ones((21, 21), np.uint8)
@@ -190,23 +194,74 @@ for i in img_nums:
         cv2.line(gray, tuple(box.rt), tuple(box.rb), 30, 1)
         cv2.line(gray, tuple(box.rb), tuple(box.lb), 30, 1)
         cv2.line(gray, tuple(box.lb), tuple(box.lt), 30, 1)
-        #print(calculateArea(box))
+
     boxes = sorted(boxes, key=lambda box: calculateArea(box), reverse=True)
-    for box in boxes:
-        print(calculateArea(box))
-        print(box.lb[0])
-        print(box.lb[1])
-        print(" ")
-    axarr[ind].imshow(gray)
-    #filter = cv2.GaussianBlur(frame, (5, 5), 0)
-    #filter = cv2.bilateralFilter(frame, 23, 10, 150)
-    #gray = cv2.cvtColor(filter, cv2.COLOR_BGR2GRAY)
-    #filter = cv2.medianBlur(filter, 3)
+    for box in boxes[:3]:
+        ar = calculateAspectRatio(box)
+        if ar>4.3 and ar<7:
+            return box
 
-    #kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-    #filter = cv2.filter2D(filter, -1, kernel)
 
-    #edged = cv2.Canny(filter, 250, 300)
-    ind += 1
-
-plt.show()
+# ind = 0
+# for i in img_nums:
+#     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
+#     ret, frame = cap.read()
+#     yellow = filter_yellow(frame)
+#
+#     kernel1 = np.ones((21, 21), np.uint8)
+#     kernel2 = np.ones((3, 3), np.uint8)
+#     yellow = cv2.erode(yellow, kernel2, iterations=1)
+#     yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel2)
+#     yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel1)
+#     gray = cv2.cvtColor(yellow, cv2.COLOR_BGR2GRAY)
+#
+#     boxes = []
+#     m = np.zeros(gray.shape)
+#
+#     for y in range(gray.shape[0]):
+#         for x in range(gray.shape[1]):
+#             found = False
+#             if gray[y][x] == 0:
+#                 continue
+#             # for box in boxes:
+#             #     if box.contains([x, y]):
+#             #         found = True
+#             #         break
+#             if found:
+#                 continue
+#             if m[y][x]:
+#                 continue
+#             d = dfs_start(gray, [x, y])
+#             m = np.logical_or(m, d)
+#             boxes.append(bbFromMap(d))
+#
+#     for box in boxes:
+#         cv2.line(gray, tuple(box.lt), tuple(box.rt), 30, 1)
+#         cv2.line(gray, tuple(box.rt), tuple(box.rb), 30, 1)
+#         cv2.line(gray, tuple(box.rb), tuple(box.lb), 30, 1)
+#         cv2.line(gray, tuple(box.lb), tuple(box.lt), 30, 1)
+#
+#     boxes = sorted(boxes, key=lambda box: calculateArea(box), reverse=True)
+#     print("iteration"+str(ind))
+#     for box in boxes[:3]:
+#         print(calculateArea(box))
+#         print(box.lb[0])
+#         print(box.lb[1])
+#         ar = calculateAspectRatio(box)
+#         print(ar)
+#         if ar>4.3 and ar<7:
+#             print("heeeey")
+#         print(" ")
+#     axarr[ind].imshow(gray)
+#     #filter = cv2.GaussianBlur(frame, (5, 5), 0)
+#     #filter = cv2.bilateralFilter(frame, 23, 10, 150)
+#     #gray = cv2.cvtColor(filter, cv2.COLOR_BGR2GRAY)
+#     #filter = cv2.medianBlur(filter, 3)
+#
+#     #kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+#     #filter = cv2.filter2D(filter, -1, kernel)
+#
+#     #edged = cv2.Canny(filter, 250, 300)
+#     ind += 1
+#
+# plt.show()
