@@ -65,6 +65,13 @@ def dfs_start(img, point):
 
     return visited
 
+def calculateArea(box):
+    area = np.abs((box.lb[0] * box.lt[1] - box.lb[1] * box.lt[0] + \
+                   box.lt[0] * box.rt[1] - box.lt[1] * box.rt[0] + \
+                   box.rt[0] * box.rb[1] - box.rt[1] * box.rb[0] + \
+                   box.rb[0] * box.lb[1] + box.rb[1] * box.lb[0]) / 2)
+    return area
+
 
 class BoundingBox:
     def __init__(self, lt, lb, rt, rb):
@@ -86,6 +93,8 @@ def bbFromMap(visited):
         for y in range(visited.shape[0]):
             if visited[y][x] == 1:
                 top_y[x] = y
+                if y == 0:
+                    top_y[x] = 1
                 break
 
     bottom_y = np.zeros((visited.shape[1], ), dtype=np.uint)
@@ -93,6 +102,8 @@ def bbFromMap(visited):
         for y in reversed(range(visited.shape[0])):
             if visited[y][x] == 1:
                 bottom_y[x] = y
+                if y == 0:
+                    bottom_y[x] = 1
                 break
 
     epsilon = 4
@@ -179,9 +190,13 @@ for i in img_nums:
         cv2.line(gray, tuple(box.rt), tuple(box.rb), 30, 1)
         cv2.line(gray, tuple(box.rb), tuple(box.lb), 30, 1)
         cv2.line(gray, tuple(box.lb), tuple(box.lt), 30, 1)
-        ## area =
-
-
+        #print(calculateArea(box))
+    boxes = sorted(boxes, key=lambda box: calculateArea(box), reverse=True)
+    for box in boxes:
+        print(calculateArea(box))
+        print(box.lb[0])
+        print(box.lb[1])
+        print(" ")
     axarr[ind].imshow(gray)
     #filter = cv2.GaussianBlur(frame, (5, 5), 0)
     #filter = cv2.bilateralFilter(frame, 23, 10, 150)
