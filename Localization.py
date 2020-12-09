@@ -1,5 +1,8 @@
+import matplotlib.pyplot as plt
 import cv2
 import numpy as np
+import sys
+sys.setrecursionlimit(310000)
 
 """
 In this file, you need to define plate_detection function.
@@ -16,53 +19,177 @@ Hints:
 	1. You may need to define other functions, such as crop and adjust function
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
+
+img_nums = [7, 8]  # 3, 4, 5, 7, 8, 10, 12, 13, 14, 17, 20]
+f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
+
+
 def plate_detection(image):
-    #Replace the below lines with your code.
+    # Replace the below lines with your code.
     plate_imgs = image
     return plate_imgs
 
-import matplotlib.pyplot as plt
 
 def filter_yellow(img):
-  img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-  for i in range(img.shape[0]):
-      for j in range(img.shape[1]):
-          if img[i][j][0] < 10 or img[i][j][0] > 35 or img[i][j][2] < 100 or img[i][j][1]<40:
-              img[i][j] = [0, 0, 0]
-  img = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
-  return img
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            if img[i][j][0] < 10 or img[i][j][0] > 35 or img[i][j][2] < 100 or img[i][j][1] < 40:
+                img[i][j] = [0, 0, 0]
+    img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+    return img
+
 
 def bgrToRgb(img):
-  return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
-img_nums = [2, 3]#, 4, 5, 7, 8, 10, 12, 13, 14, 17, 20]
+def dfs_start(img, point):
+    visited = np.zeros(img.shape, dtype=np.ubyte)
+    queue = [point]
+    while len(queue) > 0:
+        point = queue.pop(0)
+        x = point[0]
+        y = point[1]
+        if visited[y][x]:
+            continue
+        visited[y][x] = 1
+        if x > 0 and img[y][x-1] > 0 and visited[y][x-1] == 0:
+            queue.append([x-1, y])
+        if x < img.shape[1] - 1 and img[y][x+1] > 0 and visited[y][x+1] == 0:
+            queue.append([x+1, y])
+        if y > 0 and img[y-1][x] > 0 and visited[y-1][x] == 0:
+            queue.append([x, y-1])
+        if y < img.shape[0] - 1 and img[y+1][x] > 0 and visited[y+1][x] == 0:
+            queue.append([x, y+1])
 
-#takes brg
+    return visited
 
-f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
+
+class BoundingBox:
+    def __init__(self, lt, lb, rt, rb):
+        self.lt = lt
+        self.lb = lb
+        self.rt = rt
+        self.rb = rb
+
+    def contains(self, point):
+        if point[0] >= min(self.lt[0], self.lb[0]) and point[0] <= max(self.rt[0], self.rb[0]):
+            if point[1] >= min(self.lb[1], self.rb[1]) and point[1] <= max(self.rt[1], self.lt[1]):
+                return True
+        return False
+
+
+def bbFromMap(visited):
+    top_y = np.zeros((visited.shape[1], ), dtype=np.uint)
+    for x in range(visited.shape[1]):
+        for y in range(visited.shape[0]):
+            if visited[y][x] == 1:
+                top_y[x] = y
+                break
+
+    bottom_y = np.zeros((visited.shape[1], ), dtype=np.uint)
+    for x in range(visited.shape[1]):
+        for y in reversed(range(visited.shape[0])):
+            if visited[y][x] == 1:
+                bottom_y[x] = y
+                break
+
+    epsilon = 4
+
+    top_edge_y = np.average(top_y[np.where(top_y > 0)])
+    # find left top
+    lt = [0, 0]
+    for i, y in enumerate(top_y):
+        if y == 0:
+            continue
+        if np.abs(y - top_edge_y) < epsilon:
+            lt[0] = i
+            lt[1] = y
+            break
+    # find right top
+    rt = [0, 0]
+    for i, y in reversed(list(enumerate(top_y))):
+        if y == 0:
+              continue
+        if np.abs(y - top_edge_y) < epsilon:
+            rt[0] = i
+            rt[1] = y
+            break
+
+    bottom_edge_y = np.average(bottom_y[np.where(bottom_y > 0)])
+    # find left bottom
+    lb = [0, 0]
+    for i, y in enumerate(bottom_y):
+        if y == 0:
+            continue
+        if np.abs(y - bottom_edge_y) < epsilon:
+            lb[0] = i
+            lb[1] = y
+            break
+    # find right bottom
+    rb = [0, 0]
+    for i, y in reversed(list(enumerate(bottom_y))):
+        if y == 0:
+            continue
+        if np.abs(y - bottom_edge_y) < epsilon:
+            rb[0] = i
+            rb[1] = y
+            break
+
+    bb = BoundingBox(lt, lb, rt, rb)
+    return bb
+
+
 ind = 0
 for i in img_nums:
     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
     ret, frame = cap.read()
-
     yellow = filter_yellow(frame)
 
     kernel1 = np.ones((20, 20), np.uint8)
     kernel2 = np.ones((2, 2), np.uint8)
     yellow = cv2.erode(yellow, kernel2, iterations=2)
     yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel1)
-    axarr[ind].imshow(yellow)
+    gray = cv2.cvtColor(yellow, cv2.COLOR_BGR2GRAY)
 
-    filter = cv2.GaussianBlur(frame, (5, 5), 0)
+    boxes = []
+    m = np.zeros(gray.shape)
+
+    for y in range(gray.shape[0]):
+        for x in range(gray.shape[1]):
+            found = False
+            if gray[y][x] == 0:
+                continue
+            # for box in boxes:
+            #     if box.contains([x, y]):
+            #         found = True
+            #         break
+            if found:
+                continue
+            if m[y][x]:
+                continue
+            d = dfs_start(gray, [x, y])
+            m = np.logical_or(m, d)
+            boxes.append(bbFromMap(d))
+            
+    for box in boxes:
+        cv2.line(gray, tuple(box.lt), tuple(box.rt), 30, 1)
+        cv2.line(gray, tuple(box.rt), tuple(box.rb), 30, 1)
+        cv2.line(gray, tuple(box.rb), tuple(box.lb), 30, 1)
+        cv2.line(gray, tuple(box.lb), tuple(box.lt), 30, 1)
+
+
+    axarr[ind].imshow(gray)
+    #filter = cv2.GaussianBlur(frame, (5, 5), 0)
     #filter = cv2.bilateralFilter(frame, 23, 10, 150)
     #gray = cv2.cvtColor(filter, cv2.COLOR_BGR2GRAY)
     #filter = cv2.medianBlur(filter, 3)
 
-    kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-    filter = cv2.filter2D(filter, -1, kernel)
+    #kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+    #filter = cv2.filter2D(filter, -1, kernel)
 
-    edged = cv2.Canny(filter, 250, 300)
+    #edged = cv2.Canny(filter, 250, 300)
     ind += 1
 
 plt.show()
