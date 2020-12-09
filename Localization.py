@@ -69,7 +69,7 @@ def calculateArea(box):
     area = np.abs((box.lb[0] * box.lt[1] - box.lb[1] * box.lt[0] + \
                    box.lt[0] * box.rt[1] - box.lt[1] * box.rt[0] + \
                    box.rt[0] * box.rb[1] - box.rt[1] * box.rb[0] + \
-                   box.rb[0] * box.lb[1] + box.rb[1] * box.lb[0]) / 2)
+                   box.rb[0] * box.lb[1] - box.rb[1] * box.lb[0]) / 2)
     return area
 
 
