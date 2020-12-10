@@ -20,7 +20,7 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [ 3, 4, 5, 7, 8 ] #  10, 13, 14, 17, 20
+img_nums = [3, 4, 5, 7, 8, 10, 13, 14, 17, 20]
 f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 
@@ -165,7 +165,7 @@ def rotate_both_planes(img, box):
     return cv2.warpPerspective(img, M, (width, height))
 
 def plate_detection(frame, box):
-    return frame
+    # return frame
     return rotate_both_planes(frame, box)
     yellow = filter_yellow(frame)
 
@@ -216,7 +216,12 @@ bb_ev = [
     BoundingBox([247,287],[244,314],[388,290],[386,317]),
     BoundingBox([276,165],[275,194],[420,173],[420,202]),
     BoundingBox([305,341],[306,367],[431,338],[430,362]),
-    BoundingBox([349,232],[349,260],[497,226],[494,252])
+    BoundingBox([349,232],[349,260],[497,226],[494,252]),
+    BoundingBox([215,315],[215,359],[435,320],[431,364]),
+    BoundingBox([285,243],[286,266],[409,243],[410,267]),
+    BoundingBox([275,340],[277,382],[508,321],[511,378]),
+    BoundingBox([133,325],[131,429],[625,330],[629,429]),
+    BoundingBox([266,328],[263,359],[408,345],[406,378])
 ]
 
 ind = 0
