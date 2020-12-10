@@ -20,8 +20,10 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [2, 3, 4, 5] # 7, 8, 10, 12, 13, 14, 17, 20
+img_nums = [ 3, 4, 5, 7, 8 ] #  10, 13, 14, 17, 20
 f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
+
+
 
 
 def filter_yellow(img):
@@ -107,9 +109,9 @@ def bbFromMap(visited):
                     bottom_y[x] = 1
                 break
 
-    epsilon = 4
+    epsilon = 7
 
-    top_edge_y = np.average(top_y[np.where(top_y > 0)])
+    top_edge_y = np.median(top_y[np.where(top_y > 0)])
     # find left top
     lt = [0, 0]
     for i, y in enumerate(top_y):
@@ -129,7 +131,7 @@ def bbFromMap(visited):
             rt[1] = y
             break
 
-    bottom_edge_y = np.average(bottom_y[np.where(bottom_y > 0)])
+    bottom_edge_y = np.median(bottom_y[np.where(bottom_y > 0)])
     # find left bottom
     lb = [0, 0]
     for i, y in enumerate(bottom_y):
@@ -162,7 +164,9 @@ def rotate_both_planes(img, box):
 
     return cv2.warpPerspective(img, M, (width, height))
 
-def plate_detection(frame):
+def plate_detection(frame, box):
+    return frame
+    return rotate_both_planes(frame, box)
     yellow = filter_yellow(frame)
 
     kernel1 = np.ones((21, 21), np.uint8)
@@ -207,11 +211,19 @@ def plate_detection(frame):
             break
     return rotate_both_planes(frame, best_box)
 
+bb_ev = [
+    BoundingBox([352,254],[353,282],[484,250],[484,275]),
+    BoundingBox([247,287],[244,314],[388,290],[386,317]),
+    BoundingBox([276,165],[275,194],[420,173],[420,202]),
+    BoundingBox([305,341],[306,367],[431,338],[430,362]),
+    BoundingBox([349,232],[349,260],[497,226],[494,252])
+]
+
 ind = 0
 for i in img_nums:
     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
     ret, frame = cap.read()
-    axarr[ind].imshow(plate_detection(frame))
+    axarr[ind].imshow(plate_detection(frame, bb_ev[ind]))
     ind += 1
 plt.show()
 
