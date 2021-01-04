@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 import sys
-sys.setrecursionlimit(310000)
+import time
+start_time = time.time()
 
 """
 In this file, you need to define plate_detection function.
@@ -20,8 +21,8 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [3, 4, 5, 7, 8, 10, 13, 14, 17, 20]
-f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
+img_nums = [17]#3, 4, 5, 7, 8, 10, 13, 14, 17, 20
+#f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 
 
@@ -43,10 +44,22 @@ def bgrToRgb(img):
 def dfs_start(img, point):
     visited = np.zeros(img.shape, dtype=np.ubyte)
     queue = [point]
+
+    max_y = 0
+    min_y = 99999
+    max_x = 0
+    min_x = 99999
+
     while len(queue) > 0:
         point = queue.pop(0)
         x = point[0]
         y = point[1]
+
+        max_y = max(max_y, y)
+        min_y = min(min_y, y)
+        max_x = max(max_x, x)
+        min_x = min(min_x, x)
+
         if visited[y][x]:
             continue
         visited[y][x] = 1
@@ -59,7 +72,7 @@ def dfs_start(img, point):
         if y < img.shape[0] - 1 and img[y+1][x] > 0 and visited[y+1][x] == 0:
             queue.append([x, y+1])
 
-    return visited
+    return (visited, [min_y, max_x, max_y, min_x])
 
 def calculateArea(box):
     area = np.abs((box.lb[0] * box.lt[1] - box.lb[1] * box.lt[0] + \
@@ -164,9 +177,92 @@ def rotate_both_planes(img, box):
 
     return cv2.warpPerspective(img, M, (width, height))
 
-def plate_detection(frame, box):
-    # return frame
-    return rotate_both_planes(frame, box)
+def evaluateBoxes(groundTruthBox, localizedBox):
+    sum = 0
+    sum += np.sqrt((groundTruthBox.lt[0]-localizedBox.lt[0])**2+(groundTruthBox.lt[1]-localizedBox.lt[1])**2)
+    sum += np.sqrt((groundTruthBox.rt[0]-localizedBox.rt[0])**2+(groundTruthBox.rt[1]-localizedBox.rt[1])**2)
+    sum += np.sqrt((groundTruthBox.lb[0]-localizedBox.lb[0])**2+(groundTruthBox.lb[1]-localizedBox.lb[1])**2)
+    sum += np.sqrt((groundTruthBox.rb[0]-localizedBox.rb[0])**2+(groundTruthBox.rb[1]-localizedBox.rb[1])**2)
+    return sum / 4
+
+def generate_horizontal_line(points, startX):
+    left_var = np.var(points[:20])
+    rigth_var = np.var(points[-20:])
+
+    if left_var < rigth_var:
+        points = points[:len(points)-20]
+    else:
+        points = points[20:]
+        startX += 20
+
+    x = np.arange(startX, startX + len(points), dtype=int)
+    A = np.vstack([x, np.ones(len(x))]).T
+
+    a, b = np.linalg.lstsq(A, points, rcond=None)[0]
+
+    return (a, b)
+
+def generate_vertical_line(points, startY):
+    top_var = np.var(points[:15])
+    bottom_var = np.var(points[-15:])
+
+    if top_var < bottom_var:
+        points = points[:len(points)-15]
+    else:
+        points = points[15:]
+        startY += 15
+
+    y = np.arange(startY, startY + len(points), dtype=int)
+    A = np.vstack([y, np.ones(len(y))]).T
+
+    a, b = np.linalg.lstsq(A, points, rcond=None)[0]
+
+    return (a, b)
+
+def find_bounding_lines(dfs_map, extremas):
+    img = dfs_map[extremas[0]:extremas[2]+1, extremas[3]:extremas[1]+1]
+    plt.imshow(img)
+
+    # Find top line
+    top_line_points = np.zeros(extremas[1] - extremas[3] + 1, dtype=int)
+    for i in range(len(top_line_points)):
+        top_line_points[i] = extremas[0] + np.min(np.where(img[:, i] != 0))
+
+    top_line = generate_horizontal_line(top_line_points, extremas[3])
+
+    # Find bottom line
+    bottom_line_points = np.zeros(extremas[1] - extremas[3] + 1, dtype=int)
+    for i in range(len(bottom_line_points)):
+        bottom_line_points[i] = extremas[0] + np.max(np.where(img[:, i] != 0))
+
+    bottom_line = generate_horizontal_line(bottom_line_points, extremas[3]) 
+
+    # Find left line
+    left_line_points = np.zeros(extremas[2] - extremas[0] + 1, dtype=int)
+    for i in range(len(left_line_points)):
+        left_line_points[i] = extremas[3] + np.min(np.where(img[i, :] != 0))
+
+    left_line = generate_vertical_line(left_line_points, extremas[0])
+    # Find right line
+    right_line_points = np.zeros(extremas[2] - extremas[0] + 1, dtype=int)
+    for i in range(len(right_line_points)):
+        right_line_points[i] = extremas[3] + np.max(np.where(img[i, :] != 0))
+    right_line = generate_vertical_line(right_line_points, extremas[0])
+    
+
+    dis = dfs_map.astype(float)
+    for x in range(extremas[3], extremas[1] + 1):
+        dis[round(x * top_line[0] + top_line[1])][x] = 0.5
+    for x in range(extremas[3], extremas[1] + 1):
+        dis[round(x * bottom_line[0] + bottom_line[1])][x] = 0.5
+    for y in range(extremas[0], extremas[2] + 1):
+        dis[y][round(y * left_line[0] + left_line[1])] = 0.5
+    for y in range(extremas[0], extremas[2] + 1):
+        dis[y][round(y * right_line[0] + right_line[1])] = 0.5
+    plt.imshow(dis)
+    
+
+def plate_detection(frame):
     yellow = filter_yellow(frame)
 
     kernel1 = np.ones((21, 21), np.uint8)
@@ -192,16 +288,24 @@ def plate_detection(frame, box):
                 continue
             if m[y][x]:
                 continue
-            d = dfs_start(gray, [x, y])
-            m = np.logical_or(m, d)
-            boxes.append(bbFromMap(d))
+            dfs_map, extremas = dfs_start(gray, [x, y])
+            m = np.logical_or(m, dfs_map)
 
-    for box in boxes:
-        cv2.line(gray, tuple(box.lt), tuple(box.rt), 30, 1)
-        cv2.line(gray, tuple(box.rt), tuple(box.rb), 30, 1)
-        cv2.line(gray, tuple(box.rb), tuple(box.lb), 30, 1)
-        cv2.line(gray, tuple(box.lb), tuple(box.lt), 30, 1)
+            # Reject if too small
+            if extremas[2] - extremas[0] < 20 or extremas[1] - extremas[3] < 100:
+                continue
 
+            find_bounding_lines(dfs_map, extremas)
+            # boxes.append(bbFromMap(d))
+
+    # for box in boxes:
+    #     cv2.line(gray, tuple(box.lt), tuple(box.rt), 30, 1)
+    #     cv2.line(gray, tuple(box.rt), tuple(box.rb), 30, 1)
+    #     cv2.line(gray, tuple(box.rb), tuple(box.lb), 30, 1)
+    #     cv2.line(gray, tuple(box.lb), tuple(box.lt), 30, 1)
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return np.logical_and(dfs_map, gray)
     boxes = sorted(boxes, key=lambda box: calculateArea(box), reverse=True)
     best_box = boxes[0]
     for box in boxes[:3]:
@@ -228,69 +332,10 @@ ind = 0
 for i in img_nums:
     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
     ret, frame = cap.read()
-    axarr[ind].imshow(plate_detection(frame, bb_ev[ind]))
+    plate_detection(frame)
+    #axarr[ind].imshow(plate_detection(frame))
     ind += 1
+print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
+
 plt.show()
 
-# ind = 0
-# for i in img_nums:
-#     
-#     yellow = filter_yellow(frame)
-#
-#     kernel1 = np.ones((21, 21), np.uint8)
-#     kernel2 = np.ones((3, 3), np.uint8)
-#     yellow = cv2.erode(yellow, kernel2, iterations=1)
-#     yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel2)
-#     yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel1)
-#     gray = cv2.cvtColor(yellow, cv2.COLOR_BGR2GRAY)
-#
-#     boxes = []
-#     m = np.zeros(gray.shape)
-#
-#     for y in range(gray.shape[0]):
-#         for x in range(gray.shape[1]):
-#             found = False
-#             if gray[y][x] == 0:
-#                 continue
-#             # for box in boxes:
-#             #     if box.contains([x, y]):
-#             #         found = True
-#             #         break
-#             if found:
-#                 continue
-#             if m[y][x]:
-#                 continue
-#             d = dfs_start(gray, [x, y])
-#             m = np.logical_or(m, d)
-#             boxes.append(bbFromMap(d))
-#
-#     for box in boxes:
-#         cv2.line(gray, tuple(box.lt), tuple(box.rt), 30, 1)
-#         cv2.line(gray, tuple(box.rt), tuple(box.rb), 30, 1)
-#         cv2.line(gray, tuple(box.rb), tuple(box.lb), 30, 1)
-#         cv2.line(gray, tuple(box.lb), tuple(box.lt), 30, 1)
-#
-#     boxes = sorted(boxes, key=lambda box: calculateArea(box), reverse=True)
-#     print("iteration"+str(ind))
-#     for box in boxes[:3]:
-#         print(calculateArea(box))
-#         print(box.lb[0])
-#         print(box.lb[1])
-#         ar = calculateAspectRatio(box)
-#         print(ar)
-#         if ar>4.3 and ar<7:
-#             print("heeeey")
-#         print(" ")
-#     axarr[ind].imshow(gray)
-#     #filter = cv2.GaussianBlur(frame, (5, 5), 0)
-#     #filter = cv2.bilateralFilter(frame, 23, 10, 150)
-#     #gray = cv2.cvtColor(filter, cv2.COLOR_BGR2GRAY)
-#     #filter = cv2.medianBlur(filter, 3)
-#
-#     #kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-#     #filter = cv2.filter2D(filter, -1, kernel)
-#
-#     #edged = cv2.Canny(filter, 250, 300)
-#     ind += 1
-#
-# plt.show()
