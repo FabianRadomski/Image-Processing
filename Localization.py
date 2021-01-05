@@ -21,7 +21,7 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [17]#3, 4, 5, 7, 8, 10, 13, 14, 17, 20
+img_nums = [17,3, 4]#, 5, 7, 8, 10, 13, 14, 17, 20]
 #f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 
@@ -218,6 +218,22 @@ def generate_vertical_line(points, startY):
     a, b = np.linalg.lstsq(A, points, rcond=None)[0]
 
     return (a, b)
+
+# s1 - pair representing the origin of v1
+# v1 - pair representing vector v1
+# s2 - pair representing the origin of v2
+# v2 - pair representing vector v2
+# s1+v1*t = s2+v2*u
+# v1*t+(-v2)*u = s2-s1
+# x[0] holds t and x[1] holds u
+# returns a tuple (x,y) = the intersection point
+def intersection(s1, v1, s2, v2):
+    a = np.array([[v1[0], -v2[0]], [v1[1], -v2[1]]])
+    b = np.array([s2[0]-s1[0], s2[1]-s1[1]])
+    x = np.linalg.solve(a, b)
+    result = (x[0]*v1[0]+s1[0], x[0]*v1[1]+s1[1])
+    return result
+
 
 def find_bounding_lines(dfs_map, extremas):
     img = dfs_map[extremas[0]:extremas[2]+1, extremas[3]:extremas[1]+1]
