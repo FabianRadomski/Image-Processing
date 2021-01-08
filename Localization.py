@@ -21,8 +21,8 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [17,3, 4]#, 5, 7, 8, 10, 13, 14, 17, 20]
-#f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
+img_nums = [3, 4, 5, 7, 8, 10, 13, 14, 17, 20]#3, 4, 5, 7, 8, 10, 13, 14, 17, 20]
+f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 
 
@@ -212,10 +212,26 @@ def generate_vertical_line(points, startY):
         points = points[15:]
         startY += 15
 
-    y = np.arange(startY, startY + len(points), dtype=int)
+    
+
+    diffs = np.zeros(len(points) - 1)
+    for i in range(len(points) - 1):
+        diffs[i] = np.abs(points[i] - points[i + 1])
+
+    coords = []
+    median_diff = np.quantile(diffs, 0.15)
+    if median_diff == 0:
+        median_diff = 1
+
+    for i in range(len(diffs)):
+        if diffs[i] < median_diff:
+            coords.append([startY + i, points[i]])
+
+    coords = np.array(coords)
+    y = np.array(coords[:, 0])
     A = np.vstack([y, np.ones(len(y))]).T
 
-    a, b = np.linalg.lstsq(A, points, rcond=None)[0]
+    a, b = np.linalg.lstsq(A, coords[:, 1], rcond=None)[0]
 
     return (a, b)
 
@@ -237,7 +253,6 @@ def intersection(s1, v1, s2, v2):
 
 def find_bounding_lines(dfs_map, extremas):
     img = dfs_map[extremas[0]:extremas[2]+1, extremas[3]:extremas[1]+1]
-    plt.imshow(img)
 
     # Find top line
     top_line_points = np.zeros(extremas[1] - extremas[3] + 1, dtype=int)
@@ -275,7 +290,7 @@ def find_bounding_lines(dfs_map, extremas):
         dis[y][round(y * left_line[0] + left_line[1])] = 0.5
     for y in range(extremas[0], extremas[2] + 1):
         dis[y][round(y * right_line[0] + right_line[1])] = 0.5
-    plt.imshow(dis)
+    return dis
     
 
 def plate_detection(frame):
@@ -311,7 +326,7 @@ def plate_detection(frame):
             if extremas[2] - extremas[0] < 20 or extremas[1] - extremas[3] < 100:
                 continue
 
-            find_bounding_lines(dfs_map, extremas)
+            return find_bounding_lines(dfs_map, extremas)
             # boxes.append(bbFromMap(d))
 
     # for box in boxes:
@@ -349,7 +364,7 @@ for i in img_nums:
     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
     ret, frame = cap.read()
     plate_detection(frame)
-    #axarr[ind].imshow(plate_detection(frame))
+    axarr[ind].imshow(plate_detection(frame))
     ind += 1
 print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
 
