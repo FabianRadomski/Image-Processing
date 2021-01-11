@@ -21,8 +21,8 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [ 3, 4, 5, 7, 8, 10, 13, 14, 17, 20]
-f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
+img_nums = [ 3, 4, 8] #5, 7, 8, 10, 13, 14, 17, 20
+#f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 
 
@@ -41,7 +41,7 @@ def bgrToRgb(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
-def dfs_start(img, point):
+def dfs(img, point):
     visited = np.zeros(img.shape, dtype=np.ubyte)
     queue = [point]
 
@@ -54,7 +54,7 @@ def dfs_start(img, point):
         point = queue.pop(0)
         x = point[0]
         y = point[1]
-
+        
         max_y = max(max_y, y)
         min_y = min(min_y, y)
         max_x = max(max_x, x)
@@ -89,83 +89,7 @@ def calculateAspectRatio(box):
     aspect_ratio = edge2/edge1
     return aspect_ratio
 
-class BoundingBox:
-    def __init__(self, lt, lb, rt, rb):
-        self.lt = lt
-        self.lb = lb
-        self.rt = rt
-        self.rb = rb
 
-    def contains(self, point):
-        if point[0] >= min(self.lt[0], self.lb[0]) and point[0] <= max(self.rt[0], self.rb[0]):
-            if point[1] >= min(self.lb[1], self.rb[1]) and point[1] <= max(self.rt[1], self.lt[1]):
-                return True
-        return False
-
-
-def bbFromMap(visited):
-    top_y = np.zeros((visited.shape[1], ), dtype=np.uint)
-    for x in range(visited.shape[1]):
-        for y in range(visited.shape[0]):
-            if visited[y][x] == 1:
-                top_y[x] = y
-                if y == 0:
-                    top_y[x] = 1
-                break
-
-    bottom_y = np.zeros((visited.shape[1], ), dtype=np.uint)
-    for x in range(visited.shape[1]):
-        for y in reversed(range(visited.shape[0])):
-            if visited[y][x] == 1:
-                bottom_y[x] = y
-                if y == 0:
-                    bottom_y[x] = 1
-                break
-
-    epsilon = 7
-
-    top_edge_y = np.median(top_y[np.where(top_y > 0)])
-    # find left top
-    lt = [0, 0]
-    for i, y in enumerate(top_y):
-        if y == 0:
-            continue
-        if np.abs(y - top_edge_y) < epsilon:
-            lt[0] = i
-            lt[1] = y
-            break
-    # find right top
-    rt = [0, 0]
-    for i, y in reversed(list(enumerate(top_y))):
-        if y == 0:
-              continue
-        if np.abs(y - top_edge_y) < epsilon:
-            rt[0] = i
-            rt[1] = y
-            break
-
-    bottom_edge_y = np.median(bottom_y[np.where(bottom_y > 0)])
-    # find left bottom
-    lb = [0, 0]
-    for i, y in enumerate(bottom_y):
-        if y == 0:
-            continue
-        if np.abs(y - bottom_edge_y) < epsilon:
-            lb[0] = i
-            lb[1] = y
-            break
-    # find right bottom
-    rb = [0, 0]
-    for i, y in reversed(list(enumerate(bottom_y))):
-        if y == 0:
-            continue
-        if np.abs(y - bottom_edge_y) < epsilon:
-            rb[0] = i
-            rb[1] = y
-            break
-
-    bb = BoundingBox(lt, lb, rt, rb)
-    return bb
 # [tl, tr, br, bl]
 def rotate_both_planes(img, corners):
     width =  max(int(corners[1][0]) - int(corners[0][0]), int(corners[2][0]) - int(corners[3][0]))
@@ -369,7 +293,7 @@ def plate_detection(frame):
 
             if m[y][x]:
                 continue
-            dfs_map, extremas = dfs_start(gray, [x, y])
+            dfs_map, extremas = dfs(gray, [x, y])
             m = np.logical_or(m, dfs_map)
 
             # Reject if too small
@@ -381,26 +305,27 @@ def plate_detection(frame):
 
 
 
-bb_ev = [
-    BoundingBox([352,254],[353,282],[484,250],[484,275]),
-    BoundingBox([247,287],[244,314],[388,290],[386,317]),
-    BoundingBox([276,165],[275,194],[420,173],[420,202]),
-    BoundingBox([305,341],[306,367],[431,338],[430,362]),
-    BoundingBox([349,232],[349,260],[497,226],[494,252]),
-    BoundingBox([215,315],[215,359],[435,320],[431,364]),
-    BoundingBox([285,243],[286,266],[409,243],[410,267]),
-    BoundingBox([275,340],[277,382],[508,321],[511,378]),
-    BoundingBox([133,325],[131,429],[625,330],[629,429]),
-    BoundingBox([266,328],[263,359],[408,345],[406,378])
-]
+# bb_ev = [
+#     BoundingBox([352,254],[353,282],[484,250],[484,275]),
+#     BoundingBox([247,287],[244,314],[388,290],[386,317]),
+#     BoundingBox([276,165],[275,194],[420,173],[420,202]),
+#     BoundingBox([305,341],[306,367],[431,338],[430,362]),
+#     BoundingBox([349,232],[349,260],[497,226],[494,252]),
+#     BoundingBox([215,315],[215,359],[435,320],[431,364]),
+#     BoundingBox([285,243],[286,266],[409,243],[410,267]),
+#     BoundingBox([275,340],[277,382],[508,321],[511,378]),
+#     BoundingBox([133,325],[131,429],[625,330],[629,429]),
+#     BoundingBox([266,328],[263,359],[408,345],[406,378])
+# ]
 
-ind = 0
-for i in img_nums:
-    cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
-    ret, frame = cap.read()
-    axarr[ind].imshow(plate_detection(frame))
-    ind += 1
-print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
+# ind = 0
+# for i in img_nums:
+#     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
+#     ret, frame = cap.read()
+#     plate_detection(frame)
+#     #axarr[ind].imshow()
+#     ind += 1
+# print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
 
-plt.show()
+# plt.show()
 
