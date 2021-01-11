@@ -21,7 +21,7 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [3, 4, 5, 7, 8, 10, 13, 14, 17, 20]#3, 4, 5, 7, 8, 10, 13, 14, 17, 20]
+img_nums = [ 3, 4, 5, 7, 8, 10, 13, 14, 17, 20]
 f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 
@@ -167,15 +167,43 @@ def bbFromMap(visited):
     bb = BoundingBox(lt, lb, rt, rb)
     return bb
 # [tl, tr, br, bl]
-def rotate_both_planes(img, box):
-    width =  max(box.rt[0] - box.lt[0], box.rb[0] - box.lb[0])
-    height = max(box.rb[1] - box.rb[1], box.lb[1] - box.lt[1])
-    corners = np.float32([box.lt, box.rt, box.rb, box.lb])
+def rotate_both_planes(img, corners):
+    width =  max(int(corners[1][0]) - int(corners[0][0]), int(corners[2][0]) - int(corners[3][0]))
+    height = max(int(corners[2][1]) - int(corners[1][1]), int(corners[3][1]) - int(corners[0][1]))
+    corners = np.float32(corners)
     mappedCorners = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
 
-    M = cv2.getPerspectiveTransform(corners, mappedCorners)
+    A = np.zeros((12, 9))
+    for i in range(4):
+        A[i * 3] = [mappedCorners[i][0], mappedCorners[i][1], 1, 0, 0, 0, 0, 0, 0]
+        A[i * 3 + 1] = [0, 0, 0, mappedCorners[i][0], mappedCorners[i][1], 1, 0, 0, 0]
+        A[i * 3 + 2] = [0, 0, 0, 0, 0, 0, mappedCorners[i][0], mappedCorners[i][1], 1]
 
-    return cv2.warpPerspective(img, M, (width, height))
+    b = np.zeros(12)
+    for i in range(4):
+        b[i * 3] = corners[i][0]
+        b[i * 3 + 1] = corners[i][1]
+        b[i * 3 + 2] = 1
+
+    # find the least-squares solution of Ah=b
+    # h = vector with value of the transform a,b,c,d,e,f,g,h,i
+    h = np.linalg.lstsq(A, b, rcond=None)[0]
+
+    # turn it into a matrix
+    M = np.zeros((3, 3))
+    for i in range(9):
+        M[i // 3][i % 3] = h[i]
+
+    result = np.zeros((height, width, 3), dtype=int)
+
+    for i in range(width):
+        for j in range(height):
+            cords = np.matmul(M, [i, j, 1])
+            x = round(cords[0]/cords[2])
+            y = round(cords[1]/cords[2])
+            result[j][i] = img[y][x]
+
+    return result
 
 def evaluateBoxes(groundTruthBox, localizedBox):
     sum = 0
@@ -212,7 +240,7 @@ def generate_vertical_line(points, startY):
         points = points[15:]
         startY += 15
 
-    
+
 
     diffs = np.zeros(len(points) - 1)
     for i in range(len(points) - 1):
@@ -279,18 +307,41 @@ def find_bounding_lines(dfs_map, extremas):
     for i in range(len(right_line_points)):
         right_line_points[i] = extremas[3] + np.max(np.where(img[i, :] != 0))
     right_line = generate_vertical_line(right_line_points, extremas[0])
-    
 
-    dis = dfs_map.astype(float)
-    for x in range(extremas[3], extremas[1] + 1):
-        dis[round(x * top_line[0] + top_line[1])][x] = 0.5
-    for x in range(extremas[3], extremas[1] + 1):
-        dis[round(x * bottom_line[0] + bottom_line[1])][x] = 0.5
-    for y in range(extremas[0], extremas[2] + 1):
-        dis[y][round(y * left_line[0] + left_line[1])] = 0.5
-    for y in range(extremas[0], extremas[2] + 1):
-        dis[y][round(y * right_line[0] + right_line[1])] = 0.5
-    return dis
+    vecTop = (1, top_line[0])
+    topx = (extremas[1]+extremas[3])/2
+    startTop = (topx, top_line[0] * topx + top_line[1])
+
+    vecBot = (1, bottom_line[0])
+    startBot = (topx, bottom_line[0] * topx + bottom_line[1])
+
+
+    vecLeft = (left_line[0], 1)
+    lefty = (extremas[0]+extremas[2])/2
+    startLeft = (left_line[0] * lefty + left_line[1], lefty)
+
+    vecRight = (right_line[0], 1)
+    startRight = (right_line[0] * lefty + right_line[1], lefty)
+
+    leftTop = intersection(startLeft, vecLeft, startTop, vecTop)
+    rightTop = intersection(startRight, vecRight, startTop, vecTop)
+    rightBot = intersection(startRight, vecRight, startBot, vecBot)
+    leftBot = intersection(startLeft, vecLeft, startBot, vecBot)
+
+    corners = np.array([leftTop, rightTop, rightBot, leftBot])
+
+    return corners
+    # dis = dfs_map.astype(float)
+    # for x in range(extremas[3], extremas[1] + 1):
+    #     dis[round(x * top_line[0] + top_line[1])][x] = 0.5
+    # for x in range(extremas[3], extremas[1] + 1):
+    #     dis[round(x * bottom_line[0] + bottom_line[1])][x] = 0.5
+    # for y in range(extremas[0], extremas[2] + 1):
+    #     dis[y][round(y * left_line[0] + left_line[1])] = 0.5
+    # for y in range(extremas[0], extremas[2] + 1):
+    #     dis[y][round(y * right_line[0] + right_line[1])] = 0.5
+    #
+    # return dis
     
 
 def plate_detection(frame):
@@ -309,14 +360,13 @@ def plate_detection(frame):
     for y in range(gray.shape[0]):
         for x in range(gray.shape[1]):
             found = False
+
             if gray[y][x] == 0:
                 continue
-            # for box in boxes:
-            #     if box.contains([x, y]):
-            #         found = True
-            #         break
+
             if found:
                 continue
+
             if m[y][x]:
                 continue
             dfs_map, extremas = dfs_start(gray, [x, y])
@@ -326,25 +376,10 @@ def plate_detection(frame):
             if extremas[2] - extremas[0] < 20 or extremas[1] - extremas[3] < 100:
                 continue
 
-            return find_bounding_lines(dfs_map, extremas)
-            # boxes.append(bbFromMap(d))
+            corners = find_bounding_lines(dfs_map, extremas)
+            return rotate_both_planes(frame, corners)
 
-    # for box in boxes:
-    #     cv2.line(gray, tuple(box.lt), tuple(box.rt), 30, 1)
-    #     cv2.line(gray, tuple(box.rt), tuple(box.rb), 30, 1)
-    #     cv2.line(gray, tuple(box.rb), tuple(box.lb), 30, 1)
-    #     cv2.line(gray, tuple(box.lb), tuple(box.lt), 30, 1)
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    return np.logical_and(dfs_map, gray)
-    boxes = sorted(boxes, key=lambda box: calculateArea(box), reverse=True)
-    best_box = boxes[0]
-    for box in boxes[:3]:
-        ar = calculateAspectRatio(box)
-        if ar>4.3 and ar<7:
-            best_box = box
-            break
-    return rotate_both_planes(frame, best_box)
 
 bb_ev = [
     BoundingBox([352,254],[353,282],[484,250],[484,275]),
@@ -363,7 +398,6 @@ ind = 0
 for i in img_nums:
     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
     ret, frame = cap.read()
-    plate_detection(frame)
     axarr[ind].imshow(plate_detection(frame))
     ind += 1
 print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
