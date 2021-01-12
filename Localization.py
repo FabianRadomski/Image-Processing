@@ -21,7 +21,7 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [ 3, 4, 8] #5, 7, 8, 10, 13, 14, 17, 20
+img_nums = [ 4, 8] #5, 7, 8, 10, 13, 14, 17, 20
 #f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 

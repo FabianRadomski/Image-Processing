@@ -11,7 +11,7 @@ def crop_img(img, p1, p2):
     return img[bottom_x:top_x, bottom_y:top_y]
 
 
-img = cv2.imread('krzywa.png', cv2.IMREAD_COLOR)
+img = cv2.imread('SameSizeLetters/B.bmp', cv2.IMREAD_COLOR)
 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 type(img)
 
