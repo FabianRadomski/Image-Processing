@@ -64,25 +64,38 @@ def gaussianBlur(img, size):
 	kernel = cv2.getGaussianKernel(size, 0)
 	return cv2.sepFilter2D(img, -1, kernel, kernel)
 
+def hyphenate(chars, bbs):
+	diffs = np.zeros(len(chars) - 1, dtype=int)
+	for i in range(len(chars) - 1):
+		diffs[i] = bbs[i + 1][3] - bbs[i][1]
+	biggest_gaps = np.argsort(diffs)[::-1] + 1
+	first_pos = biggest_gaps[0]
+	second_pos = None
+	if np.abs(first_pos - biggest_gaps[1]) > 1:
+		second_pos = biggest_gaps[1]
+	elif np.abs(first_pos - biggest_gaps[2]) > 1:
+		second_pos = biggest_gaps[2]
+	else:
+		second_pos = biggest_gaps[3]
+
+	chars.insert(max(first_pos, second_pos), '-')
+	chars.insert(min(first_pos, second_pos), '-')
+
+	return chars
+
 gaussian_size = 3
 background_threshold = 94
 def segment_and_recognize(plate_imgs, templates):
 	plate_characters = []
+	bbs = []
 
 	gray = cv2.cvtColor(np.float32(plate_imgs), cv2.COLOR_BGR2GRAY)
-	#gray = gaussianBlur(gray, gaussian_size)
-	#gray = cv2.GaussianBlur(gray, (gaussian_size, gaussian_size), 0)
-	#gray = gray.astype(int)
-	# for y in range(plate_imgs.shape[0]):
-	# 	for x in range(plate_imgs.shape[1]):
-	# 		if gray[y][x] < background_threshold:
-	# 			gray[y][x] = 1
-	# 		else:
-	# 			gray[y][x] = 0
 
 	ret, gray = cv2.threshold(gray, background_threshold, 1, cv2.THRESH_BINARY_INV)
 
 	visited = np.zeros(gray.shape)
+
+
 
 	for x in range(plate_imgs.shape[1]):
 		for y in range(plate_imgs.shape[0]):
@@ -98,13 +111,13 @@ def segment_and_recognize(plate_imgs, templates):
 			if extremas[2] - extremas[0] < 15 or extremas[1] - extremas[3] < 4:
 				continue
 
+			bbs.append(extremas)
 			plate_characters.append(match(gray[extremas[0]:extremas[2] + 1, extremas[3]:extremas[1]], templates))
-			#plt.imshow(gray[extremas[0]:extremas[2] + 1, extremas[3]:extremas[1]])
-			#plt.show()
-	# plt.imshow(visited)
-	# plt.show()
+
+	plate_characters = hyphenate(plate_characters, bbs)
+
 	plt.imshow(plate_imgs)
-	plt.title(str(plate_characters))
+	plt.title("".join(plate_characters))
 	plt.show()
 	return plate_characters
 
@@ -118,8 +131,6 @@ ind = 0
 for i in img_nums:
 	cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
 	ret, frame = cap.read()
-	#plt.imshow(segment_and_recognize(plate_detection(frame)))
-	#axarr[ind].imshow()
 	segment_and_recognize(plate_detection(frame), templateList)
 	ind += 1
 print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
