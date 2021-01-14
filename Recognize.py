@@ -104,8 +104,7 @@ def segment_and_recognize(plate_imgs):
 
     gray = cv2.cvtColor(np.float32(plate_imgs), cv2.COLOR_BGR2GRAY)
 
-    ret, gray = cv2.threshold(
-        gray, background_threshold, 1, cv2.THRESH_BINARY_INV)
+    ret, gray = cv2.threshold(gray, background_threshold, 1, cv2.THRESH_BINARY_INV)
 
     visited = np.zeros(gray.shape)
 
@@ -128,7 +127,7 @@ def segment_and_recognize(plate_imgs):
             plate_characters.append(
                 match(gray[extremas[0]:extremas[2] + 1, extremas[3]:extremas[1]], templates))
 
-    plate_characters = hyphenate(plate_characters, bbs)
+    #plate_characters = hyphenate(plate_characters, bbs)
 
     # plt.axis("off")
     # plt.imshow(plate_imgs)
