@@ -21,7 +21,7 @@ Hints:
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
 
-img_nums = [ 4, 8] #5, 7, 8, 10, 13, 14, 17, 20
+img_nums = [ 4 ] #5, 7, 8, 10, 13, 14, 17, 20
 #f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 
@@ -255,20 +255,12 @@ def find_bounding_lines(dfs_map, extremas):
     corners = np.array([leftTop, rightTop, rightBot, leftBot])
 
     return corners
-    # dis = dfs_map.astype(float)
-    # for x in range(extremas[3], extremas[1] + 1):
-    #     dis[round(x * top_line[0] + top_line[1])][x] = 0.5
-    # for x in range(extremas[3], extremas[1] + 1):
-    #     dis[round(x * bottom_line[0] + bottom_line[1])][x] = 0.5
-    # for y in range(extremas[0], extremas[2] + 1):
-    #     dis[y][round(y * left_line[0] + left_line[1])] = 0.5
-    # for y in range(extremas[0], extremas[2] + 1):
-    #     dis[y][round(y * right_line[0] + right_line[1])] = 0.5
-    #
-    # return dis
+
     
 
 def plate_detection(frame):
+    if frame is None:
+        return None
     yellow = filter_yellow(frame)
 
     kernel1 = np.ones((21, 21), np.uint8)
@@ -302,30 +294,4 @@ def plate_detection(frame):
 
             corners = find_bounding_lines(dfs_map, extremas)
             return rotate_both_planes(frame, corners)
-
-
-
-# bb_ev = [
-#     BoundingBox([352,254],[353,282],[484,250],[484,275]),
-#     BoundingBox([247,287],[244,314],[388,290],[386,317]),
-#     BoundingBox([276,165],[275,194],[420,173],[420,202]),
-#     BoundingBox([305,341],[306,367],[431,338],[430,362]),
-#     BoundingBox([349,232],[349,260],[497,226],[494,252]),
-#     BoundingBox([215,315],[215,359],[435,320],[431,364]),
-#     BoundingBox([285,243],[286,266],[409,243],[410,267]),
-#     BoundingBox([275,340],[277,382],[508,321],[511,378]),
-#     BoundingBox([133,325],[131,429],[625,330],[629,429]),
-#     BoundingBox([266,328],[263,359],[408,345],[406,378])
-# ]
-
-# ind = 0
-# for i in img_nums:
-#     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
-#     ret, frame = cap.read()
-#     plate_detection(frame)
-#     #axarr[ind].imshow()
-#     ind += 1
-# print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
-
-# plt.show()
-
+    return None
