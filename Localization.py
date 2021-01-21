@@ -82,8 +82,8 @@ def calculateAspectRatio(box):
 
 # [tl, tr, br, bl]
 def rotate_both_planes(img, corners):
-    width =  max(int(corners[1][0]) - int(corners[0][0]), int(corners[2][0]) - int(corners[3][0]))
-    height = max(int(corners[2][1]) - int(corners[1][1]), int(corners[3][1]) - int(corners[0][1]))
+    width = min(img.shape[1], max(int(corners[1][0]) - int(corners[0][0]), int(corners[2][0]) - int(corners[3][0])))
+    height = min(img.shape[0], max(int(corners[2][1]) - int(corners[1][1]), int(corners[3][1]) - int(corners[0][1])))
     corners = np.float32(corners)
     mappedCorners = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
 
@@ -110,11 +110,11 @@ def rotate_both_planes(img, corners):
 
     result = np.zeros((height, width, 3), dtype=np.uint8)
 
-    for i in range(width):
-        for j in range(height):
+    for j in range(height):
+        for i in range(width):
             cords = np.matmul(M, [i, j, 1])
-            x = round(cords[0]/cords[2])
-            y = round(cords[1]/cords[2])
+            x = min(img.shape[1]-1, round(cords[0]/cords[2]))
+            y = min(img.shape[0]-1, round(cords[1]/cords[2]))
             result[j][i] = img[y][x]
 
     return result

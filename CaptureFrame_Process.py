@@ -34,7 +34,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
 	while cap.isOpened():
 		ret, frame = cap.read()
-		if ret and count < 20:
+		if ret:
 			plate = segment_and_recognize(plate_detection(frame), templates)
 			if plate is not None:
 				plates.append("".join(plate))
