@@ -1,9 +1,8 @@
 import cv2
 import numpy as np
-import glob
 import time
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from Localization import plate_detection, dfs, rotate_both_planes
 start_time = time.time()
 
@@ -94,6 +93,9 @@ background_threshold = 94
 
 
 def segment_and_recognize(plate_imgs, templates):
+    if plate_imgs is None:
+        return None
+
     plate_characters = []
     bbs = []
 
@@ -129,24 +131,11 @@ def segment_and_recognize(plate_imgs, templates):
 
     plate_characters = hyphenate(plate_characters, bbs)
 
-    plt.axis("off")
-    plt.imshow(cv2.cvtColor(np.float32(plate_imgs) / 255, cv2.COLOR_BGR2RGB))
-    plt.title("".join(plate_characters))
-    plt.show()
+    if len(plate_characters) == 0:
+        return None
+
+    # plt.axis("off")
+    # plt.imshow(cv2.cvtColor(np.float32(plate_imgs) / 255, cv2.COLOR_BGR2RGB))
+    # plt.title("".join(plate_characters))
+    # plt.show()
     return plate_characters
-
-
-letters = glob.glob("SameSizeLetters/*.bmp")
-numbers = glob.glob("SameSizeNumbers/*.bmp")
-images = [*letters, *numbers]
-templates = [(x[16], cv2.imread(x, cv2.IMREAD_GRAYSCALE)) for x in images]
-
-ind = 0
-for i in img_nums:
-    cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
-    ret, frame = cap.read()
-    print(segment_and_recognize(plate_detection(frame), templates))
-    ind += 1
-print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
-
-# plt.show()

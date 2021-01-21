@@ -1,6 +1,7 @@
 import cv2
 import os
 import pandas as pd
+import glob
 from Localization import plate_detection
 from Recognize import segment_and_recognize
 
@@ -17,6 +18,11 @@ Inputs:(three)
 	3. save_path: final .csv file path
 Output: None
 """
+letters = glob.glob("SameSizeLetters/*.bmp")
+numbers = glob.glob("SameSizeNumbers/*.bmp")
+images = [*letters, *numbers]
+templates = [(x[16], cv2.imread(x, cv2.IMREAD_GRAYSCALE)) for x in images]
+
 def CaptureFrame_Process(file_path, sample_frequency, save_path):
 	plates = []
 	frames = []
@@ -28,12 +34,13 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 	while cap.isOpened():
 		ret, frame = cap.read()
 		if ret:
-			plate = segment_and_recognize(plate_detection(frame))
+			plate = segment_and_recognize(plate_detection(frame), templates)
 			if plate is not None:
-				plates.append(plate)
+				plates.append("".join(plate))
 				frames.append(count)
 				timestamps.append('')
-			count += 30
+				print('Frame #' + str(count) + " : " + "".join(plate))
+			count += 100
 			cap.set(1, count)
 		else:
 			cap.release()
