@@ -29,18 +29,19 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 	timestamps = []
 
 	cap = cv2.VideoCapture(file_path)
+	fps = cap.get(cv2.CAP_PROP_FPS)
 	count = 0
 
 	while cap.isOpened():
 		ret, frame = cap.read()
-		if ret:
+		if ret and count < 20:
 			plate = segment_and_recognize(plate_detection(frame), templates)
 			if plate is not None:
 				plates.append("".join(plate))
 				frames.append(count)
-				timestamps.append('')
+				timestamps.append("%.3f" % (count / fps))
 				print('Frame #' + str(count) + " : " + "".join(plate))
-			count += 100
+			count += sample_frequency
 			cap.set(1, count)
 		else:
 			cap.release()
