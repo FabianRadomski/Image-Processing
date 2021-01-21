@@ -20,26 +20,16 @@ Hints:
 	1. You may need to define other functions, such as crop and adjust function
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
-
-img_nums = [ 4 ] #5, 7, 8, 10, 13, 14, 17, 20
+#img_nums = [ 4, 5, 7, 8, 10, 13, 14, 17, 20]
+img_nums = [4, 5, 7, 8, 10, 13, 14, 17, 20]
 #f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 
 
 
 def filter_yellow(img):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    for i in range(img.shape[0]):
-        for j in range(img.shape[1]):
-            if img[i][j][0] < 15 or img[i][j][0] > 35 or img[i][j][2] < 100 or img[i][j][1] < 50:
-                img[i][j] = [0, 0, 0]
-    img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
-    return img
-
-
-def bgrToRgb(img):
-    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    return cv2.inRange(hsv, (15, 50, 100), (35, 255, 255))
 
 def dfs(img, point):
     visited = np.zeros(img.shape, dtype=np.ubyte)
@@ -118,7 +108,7 @@ def rotate_both_planes(img, corners):
     for i in range(9):
         M[i // 3][i % 3] = h[i]
 
-    result = np.zeros((height, width, 3), dtype=int)
+    result = np.zeros((height, width, 3), dtype=np.uint8)
 
     for i in range(width):
         for j in range(height):
@@ -265,22 +255,22 @@ def plate_detection(frame):
 
     kernel1 = np.ones((21, 21), np.uint8)
     kernel2 = np.ones((3, 3), np.uint8)
-    yellow = cv2.erode(yellow, kernel2, iterations=1)
-    yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel2)
-    yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel1)
-    gray = cv2.cvtColor(yellow, cv2.COLOR_BGR2GRAY)
 
-    boxes = []
+    yellow = cv2.erode(yellow, kernel2, dst=yellow, iterations=1)
+    yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel2)
+    gray = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel1)
+    #niepotrzebne już bo filter_yellow zwraca binary image
+    #gray = cv2.cvtColor(yellow, cv2.COLOR_BGR2GRAY)
+
+    # plt.imshow(gray)
+    # plt.show()
+
     m = np.zeros(gray.shape)
 
     for y in range(gray.shape[0]):
         for x in range(gray.shape[1]):
-            found = False
 
             if gray[y][x] == 0:
-                continue
-
-            if found:
                 continue
 
             if m[y][x]:
@@ -291,7 +281,15 @@ def plate_detection(frame):
             # Reject if too small
             if extremas[2] - extremas[0] < 20 or extremas[1] - extremas[3] < 100:
                 continue
-
+            #img = dfs_map[extremas[0]:extremas[2] + 1, extremas[3]:extremas[1] + 1]
+            # plt.imshow(img)
+            # plt.show()
             corners = find_bounding_lines(dfs_map, extremas)
             return rotate_both_planes(frame, corners)
     return None
+
+# for i in img_nums:
+#     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
+#     ret, frame = cap.read()
+#     plate_detection(frame)
+# print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
