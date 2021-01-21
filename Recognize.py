@@ -5,7 +5,7 @@ import time
 
 import matplotlib.pyplot as plt
 from Localization import plate_detection, dfs, rotate_both_planes
-#start_time = time.time()
+start_time = time.time()
 
 """
 In this file, you will define your own segment_and_recognize function.
@@ -51,11 +51,10 @@ def match(letter_box, templates):
 
         minW = min(boxW, tempW)
         minH = min(boxH, tempH)
+        # all pixels - pixels that were not the same = pixels that were the same
+        xor = cv2.bitwise_xor(res[:minH, :minW], letter_box[:minH, :minW])
+        score = minW*minH - cv2.countNonZero(xor)
 
-        for x in range(minW):
-            for y in range(minH):
-                if res[y][x] == letter_box[y][x]:
-                    score += 1
         if score > max_score:
             max_score = score
             best_match = string
@@ -94,20 +93,18 @@ gaussian_size = 3
 background_threshold = 94
 
 
-def segment_and_recognize(plate_imgs):
-    if plate_imgs is None:
-        return None
-    letters = glob.glob("SameSizeLetters/*.bmp")
-    numbers = glob.glob("SameSizeNumbers/*.bmp")
-    images = [*letters, *numbers]
-    templates = [(x[16], cv2.imread(x, cv2.IMREAD_GRAYSCALE)) for x in images]
+def segment_and_recognize(plate_imgs, templates):
     plate_characters = []
     bbs = []
 
-    gray = cv2.cvtColor(np.float32(plate_imgs), cv2.COLOR_BGR2GRAY)
+    #TODO
+    #change grayscale threshold to a nice HSV filter, sth like:
+    #hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    #binaryIm = cv2.inRange(hsv, (15, 50, 100), (35, 255, 255))
 
-    ret, gray = cv2.threshold(
-        gray, background_threshold, 1, cv2.THRESH_BINARY_INV)
+    gray = cv2.cvtColor(plate_imgs, cv2.COLOR_BGR2GRAY)
+
+    ret, gray = cv2.threshold(gray, background_threshold, 1, cv2.THRESH_BINARY_INV)
 
     visited = np.zeros(gray.shape)
 
@@ -139,12 +136,17 @@ def segment_and_recognize(plate_imgs):
     return plate_characters
 
 
-
+letters = glob.glob("SameSizeLetters/*.bmp")
+numbers = glob.glob("SameSizeNumbers/*.bmp")
+images = [*letters, *numbers]
+templates = [(x[16], cv2.imread(x, cv2.IMREAD_GRAYSCALE)) for x in images]
 
 ind = 0
 for i in img_nums:
     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
     ret, frame = cap.read()
-    segment_and_recognize(plate_detection(frame))
+    print(segment_and_recognize(plate_detection(frame), templates))
     ind += 1
-#print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
+print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
+
+# plt.show()
