@@ -2,7 +2,7 @@
 
 T=$(find /home/imageprocessingcourse/ -type f -name "*test*")
 
-/usr/local/bin/python /home/imageprocessingcourse/main.py --file_path $T --output_path .
+/usr/local/bin/python /home/imageprocessingcourse/main.py --file_path $T --output_path ./Output.csv
 
 F=$(find /home/imageprocessingcourse/ -type f -name "*Output*") 
 

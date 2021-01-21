@@ -1,8 +1,8 @@
 import cv2
 import os
 import pandas as pd
-import Localization
-import Recognize
+from Localization import plate_detection
+from Recognize import segment_and_recognize
 
 """
 In this file, you will define your own CaptureFrame_Process funtion. In this function,
@@ -18,4 +18,32 @@ Inputs:(three)
 Output: None
 """
 def CaptureFrame_Process(file_path, sample_frequency, save_path):
-    pass
+	plates = []
+	frames = []
+	timestamps = []
+
+	cap = cv2.VideoCapture(file_path)
+	count = 0
+
+	while cap.isOpened():
+		ret, frame = cap.read()
+		if ret:
+			plate = segment_and_recognize(plate_detection(frame))
+			if plate is not None:
+				plates.append(plate)
+				frames.append(count)
+				timestamps.append('')
+			count += 30
+			cap.set(1, count)
+		else:
+			cap.release()
+			break
+
+	measurements = {
+		'License plate' : plates,
+		'Frame no.' : frames,
+		'Timestamp(seconds)' : timestamps
+	}
+	df = pd.DataFrame(measurements, columns= ['License plate', 'Frame no.', 'Timestamp(seconds)'])
+	df.to_csv('Results.csv', index=True, header=True)
+	return

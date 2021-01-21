@@ -22,7 +22,7 @@ docker run \
 -v $HOSTPATH:$CONTAINERPATH:rw \
 -v $XSOCK:$XSOCK:rw \
 -v $XAUTH:$XAUTH:rw \
--e DISPLAY=host.docker.internal:0 \
+-e DISPLAY=192.168.0.103:0 \
 -e XAUTHORITY=$XAUTH \
 --ipc="host" \
 cse2225image:latest 

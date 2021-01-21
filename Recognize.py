@@ -23,7 +23,7 @@ Hints:
 	You may need to define other functions.
 """
 
-img_nums = [4]  # , 5, 7, 8, 10, 13, 14, 17, 20
+img_nums = [4, 5, 7, 8, 10, 13, 14, 17, 20]  # 
 #f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
 
 
@@ -95,6 +95,8 @@ background_threshold = 94
 
 
 def segment_and_recognize(plate_imgs):
+    if plate_imgs is None:
+        return None
     letters = glob.glob("SameSizeLetters/*.bmp")
     numbers = glob.glob("SameSizeNumbers/*.bmp")
     images = [*letters, *numbers]
@@ -130,21 +132,19 @@ def segment_and_recognize(plate_imgs):
 
     plate_characters = hyphenate(plate_characters, bbs)
 
-    # plt.axis("off")
-    # plt.imshow(plate_imgs)
-    # plt.title("".join(plate_characters))
-    # plt.show()
+    plt.axis("off")
+    plt.imshow(cv2.cvtColor(np.float32(plate_imgs) / 255, cv2.COLOR_BGR2RGB))
+    plt.title("".join(plate_characters))
+    plt.show()
     return plate_characters
 
 
 
 
-# ind = 0
-# for i in img_nums:
-#     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
-#     ret, frame = cap.read()
-#     segment_and_recognize(plate_detection(frame))
-#     ind += 1
-# #print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
-
-# plt.show()
+ind = 0
+for i in img_nums:
+    cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
+    ret, frame = cap.read()
+    segment_and_recognize(plate_detection(frame))
+    ind += 1
+#print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
