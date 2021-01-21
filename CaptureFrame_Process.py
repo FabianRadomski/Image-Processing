@@ -52,5 +52,5 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 		'Timestamp(seconds)' : timestamps
 	}
 	df = pd.DataFrame(measurements, columns= ['License plate', 'Frame no.', 'Timestamp(seconds)'])
-	df.to_csv('Results.csv', index=True, header=True)
+	df.to_csv(save_path, index=True, header=True)
 	return
