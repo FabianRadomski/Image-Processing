@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import time
 
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from Localization import plate_detection, dfs, rotate_both_planes
 start_time = time.time()
 
@@ -106,9 +106,24 @@ def segment_and_recognize(plate_imgs, templates):
 
     gray = cv2.cvtColor(plate_imgs, cv2.COLOR_BGR2GRAY)
 
-    ret, gray = cv2.threshold(gray, background_threshold, 1, cv2.THRESH_BINARY_INV)
+    t = 100
+    epst = 0.1
+    while 1:
+        mL = gray[gray <= t].mean()
+        mH = gray[gray > t].mean()
+        t_new = (mL + mH) / 2
 
+        if abs(t - t_new) < epst:
+            break
+        t = t_new
+        # print(t)
+
+    ret, gray = cv2.threshold(gray, t, 1, cv2.THRESH_BINARY_INV)
+    # plt.imshow(gray)
+    # plt.show()
     visited = np.zeros(gray.shape)
+
+    height, width = gray.shape
 
     for x in range(plate_imgs.shape[1]):
         for y in range(plate_imgs.shape[0]):
@@ -122,12 +137,16 @@ def segment_and_recognize(plate_imgs, templates):
             visited = np.logical_or(dfs_map, visited)
 
             # reject noise
-            if extremas[2] - extremas[0] < 15 or extremas[1] - extremas[3] < 4:
+            if extremas[2] - extremas[0] < 0.5*height or extremas[1] - extremas[3] < 0.01*width:
+                continue
+            if extremas[2] - extremas[0] > 0.95*height or extremas[1] - extremas[3] > 0.16*width:
+                continue
+            area = np.sum(gray[extremas[0]:extremas[2] + 1, extremas[3]:extremas[1]])/(width*height)
+            if area<0.02:
                 continue
 
             bbs.append(extremas)
-            plate_characters.append(
-                match(gray[extremas[0]:extremas[2] + 1, extremas[3]:extremas[1]], templates))
+            plate_characters.append(match(gray[extremas[0]:extremas[2] + 1, extremas[3]:extremas[1]], templates))
 
     plate_characters = hyphenate(plate_characters, bbs)
 
