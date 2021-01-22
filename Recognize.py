@@ -109,6 +109,8 @@ def segment_and_recognize(plate_imgs, templates):
     t = 100
     epst = 0.1
     while 1:
+        if len(gray[gray > t]) == 0 or len(gray[gray > t]) == 0:
+            return None
         mL = gray[gray <= t].mean()
         mH = gray[gray > t].mean()
         t_new = (mL + mH) / 2
