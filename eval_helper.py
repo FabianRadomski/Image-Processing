@@ -1,3 +1,8 @@
 from CaptureFrame_Process import CaptureFrame_Process
+from multiprocessing import freeze_support
 
-CaptureFrame_Process('trainingsvideo.avi', 2, 'Output.csv')
+
+if __name__ == '__main__':
+    freeze_support()
+    CaptureFrame_Process('trainingsvideo.avi', 2, 'Output.csv')
+
