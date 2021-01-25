@@ -105,14 +105,18 @@ def segment_and_recognize(plate_imgs, templates):
     #binaryIm = cv2.inRange(hsv, (15, 50, 100), (35, 255, 255))
 
     gray = cv2.cvtColor(plate_imgs, cv2.COLOR_BGR2GRAY)
+    hist = cv2.calcHist([gray], [0], None, [256], (0, 256)).reshape((256))
+    sums = [x*hist[x] for x in range(256)]
 
     t = 100
     epst = 0.1
     while 1:
-        if len(gray[gray > t]) == 0 or len(gray[gray > t]) == 0:
-            return None
-        mL = gray[gray <= t].mean()
-        mH = gray[gray > t].mean()
+        sum_lower = np.sum(hist[:round(t) + 1])
+        sum_upper = np.sum(hist[round(t)+1:])
+        if sum_lower==0 or sum_upper==0:
+            break
+        mL = np.sum(sums[:round(t)+1])/sum_lower
+        mH = np.sum(sums[round(t)+1:])/sum_upper
         t_new = (mL + mH) / 2
 
         if abs(t - t_new) < epst:
