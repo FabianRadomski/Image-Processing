@@ -1,9 +1,8 @@
 import cv2
 import numpy as np
 import time
+from Localization import dfs
 
-import matplotlib.pyplot as plt
-from Localization import plate_detection, dfs, rotate_both_planes
 start_time = time.time()
 
 """
@@ -21,10 +20,6 @@ Outputs:(One)
 Hints:
 	You may need to define other functions.
 """
-
-img_nums = [4, 5, 7, 8, 10, 13, 14, 17, 20]  # 
-#f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
-
 
 def match(letter_box, templates):
     boxH = len(letter_box)
@@ -99,11 +94,6 @@ def segment_and_recognize(plate_imgs, templates):
     plate_characters = []
     bbs = []
 
-    #TODO
-    #change grayscale threshold to a nice HSV filter, sth like:
-    #hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    #binaryIm = cv2.inRange(hsv, (15, 50, 100), (35, 255, 255))
-
     gray = cv2.cvtColor(plate_imgs, cv2.COLOR_BGR2GRAY)
     hist = cv2.calcHist([gray], [0], None, [256], (0, 256)).reshape((256))
     sums = [x*hist[x] for x in range(256)]
@@ -159,8 +149,4 @@ def segment_and_recognize(plate_imgs, templates):
     if len(plate_characters) == 0:
         return None
 
-    # plt.axis("off")
-    # plt.imshow(cv2.cvtColor(np.float32(plate_imgs) / 255, cv2.COLOR_BGR2RGB))
-    # plt.title("".join(plate_characters))
-    # plt.show()
     return plate_characters

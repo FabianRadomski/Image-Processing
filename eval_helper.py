@@ -4,5 +4,5 @@ from multiprocessing import freeze_support
 
 if __name__ == '__main__':
     freeze_support()
-    CaptureFrame_Process('trainingsvideo.avi', 2, 'Output.csv')
+    CaptureFrame_Process('trainingsvideo.avi', 1, 'Output.csv')
 

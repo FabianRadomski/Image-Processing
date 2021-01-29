@@ -1,13 +1,11 @@
-import sys
 from typing import Text
 import cv2
 import pandas as pd
 import glob
 from Localization import plate_detection
 from Recognize import segment_and_recognize
-from queue import Queue
 from multiprocessing import Pool, cpu_count
-from time import sleep, time
+from time import time
 from operator import itemgetter
 
 """
@@ -75,7 +73,7 @@ def synthesize(results, fps, sample_frequency):
 		
 		elem = 0
 		sum = 0
-		for j in range(2, 7):
+		for j in range(2, 8 // sample_frequency):
 			if i + j >= len(results):
 				continue
 			elem += 1
@@ -84,14 +82,14 @@ def synthesize(results, fps, sample_frequency):
 		if elem != 0:
 			avg = sum / elem
 		if avg > 3:
-			if i - cur_start > 24 / (sample_frequency * 4):
+			if i - cur_start > 8 // sample_frequency:
 				frame = (results[cur_start][1] + results[i][1]) // 2
 				plates = []
 				for p in range(cur_start, i + 1):
 					plates.append(results[p][0])
 				synthesized_results.append((majority_vote(plates), frame, ("%.2f" % (frame / fps))))
 			cur_start = i + 1
-	if len(results) - cur_start > 24  / (sample_frequency * 4):
+	if len(results) - cur_start > 8 // sample_frequency:
 		frame = (results[cur_start][1] + results[len(results) - 1][1]) // 2
 		plates = []
 		for p in range(cur_start, len(results)):
@@ -105,7 +103,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 	fps = cap.get(cv2.CAP_PROP_FPS)
 	count = 0
 	
-	print("Number of processes " + str(cpu_count()))
+	print("Number of processes spawned is " + str(cpu_count()))
 
 	args = []
 	while cap.isOpened():

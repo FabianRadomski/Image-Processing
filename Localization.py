@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
-import sys
 import time
 start_time = time.time()
 
@@ -20,11 +19,6 @@ Hints:
 	1. You may need to define other functions, such as crop and adjust function
 	2. You may need to define two ways for localizing plates(yellow or other colors)
 """
-#img_nums = [ 4, 5, 7, 8, 10, 13, 14, 17, 20]
-img_nums = [4, 5, 7, 8, 10, 13, 14, 17, 20]
-#f, axarr = plt.subplots(nrows=1, ncols=len(img_nums))
-
-
 
 
 def filter_yellow(img):
@@ -87,6 +81,9 @@ def rotate_both_planes(img, corners):
     corners = np.float32(corners)
     mappedCorners = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
 
+    if height < 1 or width < 1:
+        return None
+
     A = np.zeros((12, 9))
     for i in range(4):
         A[i * 3] = [mappedCorners[i][0], mappedCorners[i][1], 1, 0, 0, 0, 0, 0, 0]
@@ -113,8 +110,8 @@ def rotate_both_planes(img, corners):
     for j in range(height):
         for i in range(width):
             cords = np.matmul(M, [i, j, 1])
-            x = min(img.shape[1]-1, round(cords[0]/cords[2]))
-            y = min(img.shape[0]-1, round(cords[1]/cords[2]))
+            x = np.clip(round(cords[0]/cords[2]), 0, img.shape[1]-1)
+            y = np.clip(round(cords[1]/cords[2]), 0, img.shape[0]-1)
             result[j][i] = img[y][x]
 
     return result
@@ -144,16 +141,29 @@ def generate_horizontal_line(points, startX):
 
     return (a, b)
 
+def get_middle(arr, radius, startY):
+    if len(arr) <= 2 * radius + 1:
+        return (arr, startY)
+    m = len(arr) // 2
+    return (arr[m - radius:m+radius], startY - radius)
+
+
 def generate_vertical_line(points, startY):
-    top_var = np.var(points[:15])
-    bottom_var = np.var(points[-15:])
+    cut = len(points) // 3
+
+    top_var = np.var(points[:cut])
+    bottom_var = np.var(points[-cut:])
 
     if top_var < bottom_var:
-        points = points[:len(points)-15]
+        points = points[:len(points)-cut]
     else:
-        points = points[15:]
-        startY += 15
+        points = points[cut:]
+        startY += cut
 
+
+    mid_cut = len(points) // 5
+
+    points, startY = get_middle(points, mid_cut, startY)
 
 
     diffs = np.zeros(len(points) - 1)
@@ -259,11 +269,6 @@ def plate_detection(frame):
     yellow = cv2.erode(yellow, kernel2, dst=yellow, iterations=1)
     yellow = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel2)
     gray = cv2.morphologyEx(yellow, cv2.MORPH_CLOSE, kernel1)
-    #niepotrzebne już bo filter_yellow zwraca binary image
-    #gray = cv2.cvtColor(yellow, cv2.COLOR_BGR2GRAY)
-
-    # plt.imshow(gray)
-    # plt.show()
 
     m = np.zeros(gray.shape)
 
@@ -281,15 +286,7 @@ def plate_detection(frame):
             # Reject if too small
             if extremas[2] - extremas[0] < 20 or extremas[1] - extremas[3] < 100:
                 continue
-            #img = dfs_map[extremas[0]:extremas[2] + 1, extremas[3]:extremas[1] + 1]
-            # plt.imshow(img)
-            # plt.show()
+
             corners = find_bounding_lines(dfs_map, extremas)
             return rotate_both_planes(frame, corners)
     return None
-
-# for i in img_nums:
-#     cap = cv2.VideoCapture("TrainingSet/Categorie I/Video" + str(i) + "_2.avi")
-#     ret, frame = cap.read()
-#     plate_detection(frame)
-# print("--- %s seconds ---" % str((time.time() - start_time) / len(img_nums)))
