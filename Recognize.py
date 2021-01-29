@@ -112,11 +112,8 @@ def segment_and_recognize(plate_imgs, templates):
         if abs(t - t_new) < epst:
             break
         t = t_new
-        # print(t)
 
     ret, gray = cv2.threshold(gray, t, 1, cv2.THRESH_BINARY_INV)
-    # plt.imshow(gray)
-    # plt.show()
     visited = np.zeros(gray.shape)
 
     height, width = gray.shape
@@ -129,10 +126,8 @@ def segment_and_recognize(plate_imgs, templates):
                 continue
 
             dfs_map, extremas = dfs(gray, [x, y])
-            #visited = np.logical_or(visited, dfs_map)
             visited = np.logical_or(dfs_map, visited)
 
-            # reject noise
             if extremas[2] - extremas[0] < 0.5*height or extremas[1] - extremas[3] < 0.01*width:
                 continue
             if extremas[2] - extremas[0] > 0.95*height or extremas[1] - extremas[3] > 0.16*width:

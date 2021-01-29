@@ -1,4 +1,3 @@
-from typing import Text
 import cv2
 import pandas as pd
 import glob
@@ -65,7 +64,6 @@ def synthesize(results, fps, sample_frequency):
 	
 	cur_start = 0
 
-	
 	for i in range(len(results) - 1):
 		diff = count_mismatches(results[i][0], results[i + 1][0])
 		if diff < 3:
@@ -102,8 +100,6 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 	cap = cv2.VideoCapture(file_path)
 	fps = cap.get(cv2.CAP_PROP_FPS)
 	count = 0
-	
-	print("Number of processes spawned is " + str(cpu_count()))
 
 	args = []
 	while cap.isOpened():
@@ -115,19 +111,12 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 		else:
 			cap.release()
 			break
-	
-
-
-	print("Starting processing plates")
-	epoch_start = time()
 
 	with Pool() as pool:
 		results = pool.starmap(execute_loop, args)
 
 	results = [res for res in results if res]
-	epoch_end = time()
 
-	print("Time: " + str(epoch_end - epoch_start))
 	results = sorted(results, key=itemgetter(1))
 	
 	df = pd.DataFrame(synthesize(results, fps, sample_frequency), columns= ['License plate', 'Frame no.', 'Timestamp(seconds)'])
